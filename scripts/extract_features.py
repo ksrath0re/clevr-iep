@@ -11,7 +11,8 @@ from scipy.misc import imread, imresize
 
 import torch
 import torchvision
-
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--input_image_dir', required=True)
@@ -72,7 +73,7 @@ def main(args):
     idx_set.add(idx)
   input_paths.sort(key=lambda x: x[1])
   assert len(idx_set) == len(input_paths)
-  assert min(idx_set) == 0 and max(idx_set) == len(idx_set) - 1
+  #assert min(idx_set) == 0 and max(idx_set) == len(idx_set) - 1
   if args.max_images is not None:
     input_paths = input_paths[:args.max_images]
   print(input_paths[0])

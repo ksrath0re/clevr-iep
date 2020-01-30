@@ -49,7 +49,9 @@ def load_program_generator(path):
 
 def load_execution_engine(path, verbose=True):
   checkpoint = load_cpu(path)
+  #print(checkpoint)
   kwargs = checkpoint['execution_engine_kwargs']
+  print(kwargs)
   state = checkpoint['execution_engine_state']
   kwargs['verbose'] = verbose
   model = ModuleNet(**kwargs)

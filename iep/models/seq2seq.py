@@ -54,7 +54,9 @@ class Seq2Seq(nn.Module):
         N = x.size(0) if x is not None else None
         N = y.size(0) if N is None and y is not None else N
         T_in = x.size(1) if x is not None else None
-        T_out = y.view(1, -1).size(1) if not y is None else None
+        #if y is not None:
+        #  #print(y.size(), " in get_dim")
+        T_out = y.size(1) if not y is None else None
         return V_in, V_out, D, H, L, N, T_in, T_out
 
     def before_rnn(self, x, replace=0):
@@ -94,7 +96,7 @@ class Seq2Seq(nn.Module):
         if T_out > 1:
             y, _ = self.before_rnn(y)
         y_embed = self.decoder_embed(y)
-        y_embed = y_embed.view(y_embed.shape[0], -1, y_embed.shape[-1])
+        y_embed = y_embed.view(y_embed.size()[0], -1, y_embed.size()[-1])
         encoded_repeat = encoded.view(N, 1, H).expand(N, T_out, H)
         rnn_input = torch.cat([encoded_repeat, y_embed], 2)
         if h0 is None:

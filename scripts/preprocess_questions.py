@@ -60,6 +60,7 @@ def main(args):
     return
 
   print('Loading data')
+  print(args.input_questions_json)
   with open(args.input_questions_json, 'r') as f:
     questions = json.load(f)['questions']
 
