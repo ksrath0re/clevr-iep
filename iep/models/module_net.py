@@ -25,13 +25,18 @@ class ConcatBlock(nn.Module):
                         with_batchnorm=with_batchnorm)
 
   def forward(self, x, y):
+    #print("Shape of x and y ", x.size(), y.size())
     out = torch.cat([x, y], 1) # Concatentate along depth
+    #print("Shape of out  ", out.size())
     out = F.relu(self.proj(out))
+    #print("Shape of out after relu ", out.size())
     out = self.res_block(out)
+    #print("returning out shape :", out.size())
     return out
 
 
 def build_stem(feature_dim, module_dim, num_layers=2, with_batchnorm=True):
+  print("dims : ", feature_dim, module_dim)
   layers = []
   prev_dim = feature_dim
   for i in range(num_layers):
@@ -47,7 +52,10 @@ def build_classifier(module_C, module_H, module_W, num_answers,
                      fc_dims=[], proj_dim=None, downsample='maxpool2',
                      with_batchnorm=True, dropout=0):
   layers = []
+  print("module_C, module_H, module_W : ", module_C, module_H, module_W)
+  print("fc dims : ", fc_dims)
   prev_dim = module_C * module_H * module_W
+  print("prev dims : ", prev_dim)
   if proj_dim is not None and proj_dim > 0:
     layers.append(nn.Conv2d(module_C, proj_dim, kernel_size=1))
     if with_batchnorm:
@@ -158,6 +166,7 @@ class ModuleNet(nn.Module):
     self.all_module_grad_outputs = []
     # We can't easily handle minibatching of modules, so just do a loop
     N = feats.size(0)
+    print(" _forward_modules_json")
     final_module_outputs = []
     for i in range(N):
       if self.save_module_outputs:
@@ -173,8 +182,12 @@ class ModuleNet(nn.Module):
           module_inputs = [module_outputs[j] for j in f['inputs']]
         module_outputs.append(module(*module_inputs))
         if self.save_module_outputs:
+          #print("module_outputs[-1].data : ", module_outputs[-1].data)
+          #print("all_module_outputs[-1]: ", self.all_module_outputs[-1])
           self.all_module_outputs[-1].append(module_outputs[-1].data.cpu().clone())
           module_outputs[-1].register_hook(gen_hook(i, j))
+          #if self.all_module_outputs[-1][-1] == module_outputs[-1].data:
+              #print("they are same.")
       final_module_outputs.append(module_outputs[-1])
     final_module_outputs = torch.cat(final_module_outputs, 0)
     return final_module_outputs
@@ -215,6 +228,7 @@ class ModuleNet(nn.Module):
       each image.
     """
     N = feats.size(0)
+    #print("_forward_modules_ints ")
     final_module_outputs = []
     self.used_fns = torch.Tensor(program.size()).fill_(0)
     for i in range(N):
@@ -222,6 +236,7 @@ class ModuleNet(nn.Module):
       final_module_outputs.append(cur_output)
     self.used_fns = self.used_fns.type_as(program.data).float()
     final_module_outputs = torch.cat(final_module_outputs, 0)
+    #print("shape of final_module_outputs : ", final_module_outputs.size())
     return final_module_outputs
 
   def forward(self, x, program):
@@ -229,7 +244,9 @@ class ModuleNet(nn.Module):
     assert N == len(program)
 
     feats = self.stem(x)
-
+    #print("type of feats_var after stem: ", type(feats))
+    #print("shape of feats : ", feats.size())
+    #print("dim() are : ", program.dim())
     if type(program) is list or type(program) is tuple:
       final_module_outputs = self._forward_modules_json(feats, program)
     elif type(program) is Variable and program.dim() == 2:
@@ -239,5 +256,7 @@ class ModuleNet(nn.Module):
 
     # After running modules for each input, concatenat the outputs from the
     # final module and run the classifier.
+    #print("output : ", type(final_module_outputs))
     out = self.classifier(final_module_outputs)
+    #print("shape of out after modulenet :", out.size())
     return out

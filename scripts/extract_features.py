@@ -13,7 +13,7 @@ import torch
 import torchvision
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
+from torchsummary import summary
 parser = argparse.ArgumentParser()
 parser.add_argument('--input_image_dir', required=True)
 parser.add_argument('--max_images', default=None, type=int)
@@ -33,6 +33,7 @@ def build_model(args):
   if not 'resnet' in args.model:
     raise ValueError('Feature extraction only supports ResNets')
   cnn = getattr(torchvision.models, args.model)(pretrained=True)
+  #print(repr(cnn))
   layers = [
     cnn.conv1,
     cnn.bn1,
@@ -45,6 +46,7 @@ def build_model(args):
   model = torch.nn.Sequential(*layers)
   model.cuda()
   model.eval()
+  #summary(model, (224, 224, 3))
   return model
 
 
@@ -56,10 +58,11 @@ def run_batch(cur_batch, model):
   image_batch = (image_batch / 255.0 - mean) / std
   image_batch = torch.FloatTensor(image_batch).cuda()
   image_batch = torch.autograd.Variable(image_batch, volatile=True)
+  print("image batch shape ", image_batch.size())
 
   feats = model(image_batch)
   feats = feats.data.cpu().clone().numpy()
-
+  print("feats shape :", feats.shape)
   return feats
 
 
@@ -91,11 +94,14 @@ def main(args):
       img = imresize(img, img_size, interp='bicubic')
       img = img.transpose(2, 0, 1)[None]
       cur_batch.append(img)
+      #print("Curr batch shape : ", cur_batch.size())
       if len(cur_batch) == args.batch_size:
         feats = run_batch(cur_batch, model)
         if feat_dset is None:
           N = len(input_paths)
           _, C, H, W = feats.shape
+          print("N : ", N)
+          print("Feats Shape : ", feats.shape)
           feat_dset = f.create_dataset('features', (N, C, H, W),
                                        dtype=np.float32)
         i1 = i0 + len(cur_batch)

@@ -29,6 +29,7 @@ class ResidualBlock(nn.Module):
       self.proj = nn.Conv2d(in_dim, out_dim, kernel_size=1)
 
   def forward(self, x):
+    #print("x ka size :", x.size())
     if self.with_batchnorm:
       out = F.relu(self.bn1(self.conv1(x)))
       out = self.bn2(self.conv2(out))
@@ -39,6 +40,7 @@ class ResidualBlock(nn.Module):
       out = F.relu(res + out)
     else:
       out = F.relu(out)
+    #print("out ka shape :", out.size())
     return out
 
 

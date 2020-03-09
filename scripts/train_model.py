@@ -26,6 +26,7 @@ import iep.preprocess
 from iep.data import ClevrDataset, ClevrDataLoader
 from iep.models import ModuleNet, Seq2Seq, LstmModel, CnnLstmModel, CnnLstmSaModel
 
+#os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 parser = argparse.ArgumentParser()
 
@@ -201,16 +202,28 @@ def train_loop(args, train_loader, val_loader):
 
   print('train_loader has %d samples' % len(train_loader.dataset))
   print('val_loader has %d samples' % len(val_loader.dataset))
-
+  print('train_loader length', len(train_loader))
+  #print('train_loader[0] length', len(train_loader[0]))
   while t < args.num_iterations:
     epoch += 1
     print('Starting epoch %d' % epoch)
     for batch in train_loader:
       t += 1
-      questions, _, feats, answers, programs, _ = batch
+      questions, abc, feats, answers, programs, xyz = batch
+      #print("Questions : ", questions.size())
+      #print( " abc : ",abc.size())
+      #print( " Features :", feats.size())
+      #print( " Answers : ", answers.size())
+      #print(" prgrams : ",  programs.size())
+      #print(" last :", xyz.size())
+      #print("----------------")
+      #print(programs)
       questions_var = Variable(questions.cuda())
       feats_var = Variable(feats.cuda())
       answers_var = Variable(answers.cuda())
+      #print(questions_var)
+      #print("------")
+      #print(programs)
       if programs[0] is not None:
         programs_var = Variable(programs.cuda())
 
@@ -224,7 +237,10 @@ def train_loop(args, train_loader, val_loader):
       elif args.model_type == 'EE':
         # Train execution engine with ground-truth programs
         ee_optimizer.zero_grad()
+        #print("hello feats shape :", feats_var.size())
         scores = execution_engine(feats_var, programs_var)
+        print("Shape of score var and ans_var : ", scores.size(), answers_var.size())
+        print("type of score and ans_var : ", type(scores.data), type(answers_var.data))
         loss = loss_fn(scores, answers_var)
         loss.backward()
         ee_optimizer.step()
@@ -240,7 +256,9 @@ def train_loop(args, train_loader, val_loader):
         scores = execution_engine(feats_var, programs_pred)
 
         loss = loss_fn(scores, answers_var)
+        #print("dim of score :", scores.size())
         _, preds = scores.data.cpu().max(1)
+        #print("dim of pred :", preds.size())
         raw_reward = (preds == answers).float()
         reward_moving_average *= args.reward_decay
         reward_moving_average += (1.0 - args.reward_decay) * raw_reward.mean()
@@ -257,7 +275,7 @@ def train_loop(args, train_loader, val_loader):
           pg_optimizer.step()
 
       if t % args.record_loss_every == 0:
-        print(t, loss.data[0])
+        print("-------------- ", t, loss.data[0])
         stats['train_losses'].append(loss.data[0])
         stats['train_losses_ts'].append(t)
         if reward is not None:
@@ -457,7 +475,9 @@ def check_accuracy(args, program_generator, execution_engine, baseline_model, lo
     if args.model_type == 'PG':
       vocab = utils.load_vocab(args.vocab_json)
       for i in range(questions.size(0)):
+        #print("q : ", questions[i:i+1])
         program_pred = program_generator.sample(Variable(questions[i:i+1].cuda(), volatile=True))
+        print("program_pred : ", program_pred)
         program_pred_str = iep.preprocess.decode(program_pred, vocab['program_idx_to_token'])
         program_str = iep.preprocess.decode(programs[i], vocab['program_idx_to_token'])
         if program_pred_str == program_str:

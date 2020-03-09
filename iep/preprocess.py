@@ -89,6 +89,8 @@ def encode(seq_tokens, token_to_idx, allow_unk=False):
 
 def decode(seq_idx, idx_to_token, delim=None, stop_at_end=True):
   tokens = []
+  #print("idx_to_token : ", seq_idx)
+  #print("idx_to_token type: ", type(seq_idx))
   for idx in seq_idx:
     tokens.append(idx_to_token[idx])
     if stop_at_end and tokens[-1] == '<END>':
